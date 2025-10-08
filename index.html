@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Sala de Leitura - Escola Therezinha Villani</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #f7f9fc, #e9eef5);
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background: #2e5aac;
+      color: white;
+      text-align: center;
+      padding: 25px 10px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    }
+
+    header h1 {
+      margin: 0;
+      font-weight: 600;
+      font-size: 1.9em;
+    }
+
+    .search-container {
+      text-align: center;
+      margin: 25px 0 15px;
+    }
+
+    input[type="text"] {
+      width: 70%;
+      max-width: 600px;
+      padding: 12px 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1em;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: #2e5aac;
+      outline: none;
+      box-shadow: 0 0 8px rgba(46, 90, 172, 0.3);
+    }
+
+    .cards-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      padding: 0 30px 80px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+      transition: transform 0.2s, box-shadow 0.2s;
+      border-left: 6px solid #2e5aac;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+    }
+
+    .card h3 {
+      color: #2e5aac;
+      margin-top: 0;
+      font-size: 1.1em;
+    }
+
+    .card p {
+      margin: 5px 0;
+      font-size: 0.95em;
+    }
+
+    .indicator {
+      font-weight: 600;
+      color: #444;
+    }
+
+    .loading {
+      text-align: center;
+      color: #666;
+      padding: 20px;
+      font-style: italic;
+    }
+
+    footer {
+      text-align: center;
+      padding: 12px;
+      background: #2e5aac;
+      color: white;
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      font-size: 0.9em;
+      box-shadow: 0 -2px 6px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>📚 Sala de Leitura - Escola Therezinha Villani</h1>
+  </header>
+
+  <div class="search-container">
+    <input type="text" id="searchInput" placeholder="Pesquisar por título, autor, gênero ou prateleira...">
+  </div>
+
+  <div id="cards" class="cards-container"></div>
+  <div id="loading" class="loading">Carregando acervo...</div>
+
+  <footer>
+    © 2025 Escola Therezinha Villani — Sala de Leitura
+  </footer>
+
+  <script>
+    const searchInput = document.getElementById("searchInput");
+    const cardsContainer = document.getElementById("cards");
+    const loading = document.getElementById("loading");
+
+    let leituraData = [];
+    let filteredData = [];
+    let loadedCount = 0;
+    const batchSize = 25; // quantidade de livros por carregamento
+
+    async function fetchLeitura() {
+      try {
+        const response = await fetch("leitura.json");
+        const json = await response.json();
+
+        // Converte o objeto numerado em array
+        leituraData = Object.values(json);
+        filteredData = leituraData;
+        renderNextBatch();
+      } catch (error) {
+        loading.textContent = "Erro ao carregar o arquivo leitura.json";
+      }
+    }
+
+    function renderNextBatch() {
+      const slice = filteredData.slice(loadedCount, loadedCount + batchSize);
+      slice.forEach((livro) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <h3>${livro["Título"] || "Sem título"}</h3>
+          <p><span class="indicator">Autor:</span> ${livro["Autor"] || "-"}</p>
+          <p><span class="indicator">Gênero:</span> ${livro["Gênero"] || "-"}</p>
+          <p><span class="indicator">Prateleira:</span> ${livro["Prateleira"] || "-"}</p>
+          <p><span class="indicator">Editora:</span> ${livro["Editora"] || "-"}</p>
+          <p><span class="indicator">Ano:</span> ${livro["Ano"] || "-"}</p>
+        `;
+        cardsContainer.appendChild(card);
+      });
+
+      loadedCount += slice.length;
+
+      if (loadedCount >= filteredData.length) {
+        loading.style.display = "none";
+      } else {
+        loading.textContent = "Desça para carregar mais livros...";
+      }
+    }
+
+    // Carrega mais livros ao rolar a página
+    window.addEventListener("scroll", () => {
+      if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 50) {
+        renderNextBatch();
+      }
+    });
+
+    // Busca dinâmica
+    searchInput.addEventListener("input", () => {
+      const term = searchInput.value.toLowerCase();
+      cardsContainer.innerHTML = "";
+      loadedCount = 0;
+
+      filteredData = leituraData.filter(livro =>
+        (livro["Título"] && livro["Título"].toLowerCase().includes(term)) ||
+        (livro["Autor"] && livro["Autor"].toLowerCase().includes(term)) ||
+        (livro["Gênero"] && livro["Gênero"].toLowerCase().includes(term)) ||
+        (livro["Editora"] && livro["Editora"].toLowerCase().includes(term)) ||
+        (livro["Prateleira"] && livro["Prateleira"].toLowerCase().includes(term))
+      );
+
+      if (filteredData.length === 0) {
+        loading.textContent = "Nenhum resultado encontrado.";
+        loading.style.display = "block";
+      } else {
+        loading.style.display = "block";
+        renderNextBatch();
+      }
+    });
+
+    fetchLeitura();
+  </script>
+</body>
+</html>
